@@ -64,17 +64,17 @@ class PhraseTable(object):
 
 		#Create snt files
 		self.info('Create snt files...')
-		subprocess.call([r'giza-pp/GIZA++-v2/plain2snt.out', cleaned_src_path, cleaned_target_path])
+		subprocess.call([r'../giza-pp/GIZA++-v2/plain2snt.out', cleaned_src_path, cleaned_target_path])
 
 		#Create vcb.classes files
 		self.info('Create classes files...')
-		subprocess.call([r'giza-pp/mkcls-v2/mkcls', '-p' + cleaned_src_path, '-V' + cleaned_target_path + '.vcb.classes'])
-		subprocess.call([r'giza-pp/mkcls-v2/mkcls', '-p' + cleaned_target_path, '-V' + cleaned_src_path + '.vcb.classes'])
+		subprocess.call([r'../giza-pp/mkcls-v2/mkcls', '-p' + cleaned_src_path, '-V' + cleaned_target_path + '.vcb.classes'])
+		subprocess.call([r'../giza-pp/mkcls-v2/mkcls', '-p' + cleaned_target_path, '-V' + cleaned_src_path + '.vcb.classes'])
 
 		#Run word alignment
 		target_source_snt = cleaned_target_path + '_' + cleaned_src_path.split('/')[-1] + '.snt'
 		self.info('Running word alinment...')
-		subprocess.call([r'giza-pp/GIZA++', ' -S ' + cleaned_target_path + '.vcb' \
+		subprocess.call([r'../giza-pp/GIZA++', ' -S ' + cleaned_target_path + '.vcb' \
 			,' -T ' + cleaned_src_path + '.vcb' \
 			,' -C ' + target_source_snt \
 			,' -o ' + self.word_output \
