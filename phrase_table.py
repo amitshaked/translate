@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 import re
 import os.path
 import subprocess
@@ -39,7 +40,7 @@ class PhraseTable(object):
 
 		cleaned_src = []
 		cleaned_target = []
-		
+
 		self.info('Cleaning...')
 		with open(self.source_language_corpus_path, 'rb') as src:
 			cleaned_src = filter(longer_than_max, src.readlines())
@@ -73,8 +74,8 @@ class PhraseTable(object):
 
 		#Run word alignment
 		target_source_snt = cleaned_target_path + '_' + cleaned_src_path.split('/')[-1] + '.snt'
-		
-		self.info('Running word alinment...')		
+
+		self.info('Running word alinment...')
 		subprocess.call([r'../giza-pp/GIZA++-v2/GIZA++', ' -S ' + cleaned_target_path + '.vcb' \
 			,' -T ' + cleaned_src_path + '.vcb' \
 			,' -C ' + target_source_snt \
