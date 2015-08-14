@@ -1,6 +1,8 @@
 import argparse
 import sys
 import phrase_table
+from nltk.probability import LidstoneProbDist, WittenBellProbDist
+import nltk
 from collections import namedtuple
 
 def main():
@@ -21,7 +23,16 @@ def main():
 	pt.word_alignment()
 	pt.phrase_alignment()
 
+	create_language_model(args.corpus_file_for_lm)
+
 	return 0
+
+def create_language_model(corpus):
+	estimator = lambda fdist, bins: LidstoneProbDist(fdist, 0.2)
+	with open(corpus, 'rb') as c:
+		lm = nltk.NgramModel(3, c.readlines(), estimator)
+		print lm
+
 
 if __name__ == '__main__':
 	sys.exit(main())
