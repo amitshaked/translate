@@ -1,22 +1,14 @@
+#!/usr/bin/env python2.7
+
 import re
 import os.path
 import subprocess
-
-
-ALPHABET = [chr(ord('a') + i) for i in xrange(ord('z') - ord('a') + 1)] + [chr(ord('A') + i) for i in xrange(ord('Z') - ord('A') + 1)]
-
-# TODO: should we accept non-alphabet tokens?
-def tokenize(s):
-	def is_word(x):
-		return len(x) and x[0] in ALPHABET
-	def convert(x):
-		return re.sub('[^a-zA-Z]', '', x).lower()
-	return filter(is_word, map(convert, re.findall(r"[\w'.]+", s)))
-
+import tokenizer 
+from translation import Translation
 
 class PhraseTable(object):
 
-	def __init__(self, source_language_corpus_path, target_language_corpus_path, alignment_folder, word_output, phrase_output, max_tokens, verbose=True):
+	def __init__(self, max_tokens, verbose=True):
 		# Print to log if needed
 		if verbose:
 			def info(s):
@@ -26,12 +18,16 @@ class PhraseTable(object):
 				pass
 
 		self.info = info
-		self.source_language_corpus_path = source_language_corpus_path
-		self.target_language_corpus_path = target_language_corpus_path
 		self.max_tokens = max_tokens
-		self.alignment_folder = alignment_folder
-		self.word_output = word_output
-		self.phrase_output = phrase_output
+		self.source_language_corpus_path = None
+		self.target_language_corpus_path = None
+		self.word_alignment_file_path = None		
+
+	def set_source_language_corpus_path(self, source_language_corpus_path):
+		self.source_language_corpus_path = source_language_corpus_path
+
+	def set_target_language_corpus_path(self, target_language_corpus_path):
+		self.target_language_corpus_path = target_language_corpus_path
 
 	def _clean(self, src, dest, cleaned_src_path, cleaned_target_path, m):
 		def longer_than_max(x):
@@ -52,9 +48,9 @@ class PhraseTable(object):
 		with open(cleaned_target_path, 'wb') as target:
 			target.writelines(cleaned_target)
 
-	def word_alignment(self, override=False):
-		final_path = self.alignment_folder + '/' + self.word_output + '.actual.ti.final'
-		if os.path.isfile(final_path) and not override:
+	def word_alignment(self, input_path, output_prefix, output_path, override=False):
+		self.word_alignment_file_path = output_path + '/' + output_prefix + '.actual.ti.final'
+		if os.path.isfile(self.word_alignment_file_path) and not override:
 			return
 
 		#Clean lines longer than max tokens
@@ -78,8 +74,20 @@ class PhraseTable(object):
 		subprocess.call([r'../giza-pp/GIZA++-v2/GIZA++', '-S', cleaned_target_path + '.vcb' \
 			,'-T', cleaned_src_path + '.vcb' \
 			,'-C', target_source_snt \
-			,'-o', self.word_output \
-			,'-outputpath', self.alignment_folder])
+			,'-o', output_prefix \
+			,'-outputpath', output_path])
 
-	def phrase_alignment(self):
+	def phrase_alignment(self, phrase_output):
 		pass
+
+	def translate(self, phrase):
+		#TODO implement
+		trans = 'we are the knighs who say "ni!"'
+		prob = 0
+		translations = []
+		translations.append(Translation(phrase, trans, prob))
+		return translations
+
+	@staticmethod
+	def load(f):
+		return PhraseTable(0, False)
