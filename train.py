@@ -14,13 +14,15 @@ def main():
     parser.add_argument('-po', '--phrase_output', type=str, default='phrase', help='phrase alignment output path')
     parser.add_argument('-mt', '--max_tokens', type=int, default=60, help='Maximum number of tokens pe line')
     parser.add_argument('-lo', '--lm_output', type=str, required=True, help='language model output path')
-    parser.add_argument('--override', action='store_true')
 
     args = parser.parse_args()
 
-    pt = phrase_table.PhraseTable(args.source_language_corpus_path, args.target_language_corpus_path, \
-        args.alignment_folder, args.word_output, args.phrase_output, args.max_tokens, verbose = True)
-    pt.word_alignment(override=args.override)
+    pt = phrase_table.PhraseTable(args.source_language_corpus_path,   \
+            args.target_language_corpus_path,  args.alignment_folder, \
+            args.word_output, args.phrase_output, args.max_tokens,    \
+            verbose = True)
+    # TODO: Symmetrization
+    pt.word_alignment()
     pt.phrase_alignment()
 
     return 0

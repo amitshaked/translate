@@ -1,10 +1,15 @@
 #!/usr/bin/env python2
+import math
 import codecs
 import re
 import os.path
 import subprocess
 import operator
+from itertools import count
+import progressbar
+from db import PhraseDB
 
+MAX_PHRASE_LEN = 7
 
 ALPHABET = [chr(ord('a') + i) for i in xrange(ord('z') - ord('a') + 1)] + [chr(ord('A') + i) for i in xrange(ord('Z') - ord('A') + 1)]
 
@@ -46,6 +51,7 @@ class PhraseTable(object):
         self.phrase_output = phrase_output
 
         self.final_wa_path = os.path.join(self.alignment_folder, self.word_output) + '.A3.final'
+        self.db_path = os.path.join(self.alignment_folder, 'phrase.db')
 
     def _clean(self, source, target, source_cleaned, target_cleaned, m):
         self.info('Cleaning...')
@@ -76,15 +82,15 @@ class PhraseTable(object):
         source_out.close()
         target_out.close()
 
-    def word_alignment(self, override=False, clean=True):
-        if os.path.exists(self.final_wa_path) and not override:
-            return
+    def word_alignment(self):
+        if os.path.exists(self.final_wa_path):
+            if raw_input('Word alignment already exists! Override [y/N]? ') != 'y':
+                return
 
         cleaned_src_path = self.source_language_corpus_path + '.cleaned'
         cleaned_target_path = self.target_language_corpus_path + '.cleaned'
 
-        if clean:
-            self._clean(self.source_language_corpus_path, self.target_language_corpus_path, cleaned_src_path, cleaned_target_path, self.max_tokens)
+        self._clean(self.source_language_corpus_path, self.target_language_corpus_path, cleaned_src_path, cleaned_target_path, self.max_tokens)
 
         # Create snt files
         self.info('Create snt files...')
@@ -148,14 +154,23 @@ class PhraseTable(object):
         return source_sen, target_sen
 
     def extract_phrase_pairs(self, s, t):
-        # Check whether set of indexes x is quasi-consecutive in sentence sen
         def is_quasi_consecutive(x, sen):
+            ''' Checks whether set of indexes 'x' is quasi-consecutive in sentence 'sen' '''
             for i in xrange(min(x)+1, max(x)):
                 if i not in x and len(sen[i].al) > 0:
                     return False
             return True
 
         pairs = []
+
+        # Calculate minima and maxima
+        for i in xrange(len(s)):
+            if not s[i].al:
+                s[i].al_min = 0xffffffff
+                s[i].al_max = -1
+            else:
+                s[i].al_min = min(s[i].al)
+                s[i].al_max = max(s[i].al)
 
         # (s_start, ..., s_end) is the source phrase
         for s_start in xrange(len(s)):
@@ -168,7 +183,7 @@ class PhraseTable(object):
             sp = set()
             calc_sp = True
 
-            for s_end in xrange(s_start, len(s)):
+            for s_end in xrange(s_start, min(s_start + MAX_PHRASE_LEN, len(s))):
                 tp |= s[s_end].al
                 if len(tp)==0 or not is_quasi_consecutive(tp, t):
                     continue
@@ -177,12 +192,10 @@ class PhraseTable(object):
                 old_max = tp_max
 
                 if s[s_end].al:
-                    new_min = min(s[s_end].al)
-                    new_max = max(s[s_end].al)
-                    if new_min < tp_min:
-                        tp_min = new_min
-                    if new_max > tp_max:
-                        tp_max = new_max
+                    if s[s_end].al_min < tp_min:
+                        tp_min = s[s_end].al_min
+                    if s[s_end].al_max > tp_max:
+                        tp_max = s[s_end].al_max
 
                 if calc_sp:
                     sp = reduce(operator.or_, (t[i].al for i in xrange(tp_min, tp_max+1)))
@@ -198,36 +211,83 @@ class PhraseTable(object):
                     if x < s_start or x > s_end:
                         continue
 
-                pairs.append(tuple(s[i].word for i in xrange(s_start, s_end+1)))
+                t_start = tp_min
+                t_end = tp_max
+
+                source_phrase = tuple(s[i].word for i in xrange(s_start, s_end+1))
+                base_target_phrase = tuple(t[i].word for i in xrange(t_start, t_end+1))
+
+                # Add all unaligned words from both sides of the target phrase as
+                # additional possible target phrases
+                for new_t_start in xrange(t_start, -1, -1):
+                    target_phrase = base_target_phrase
+                    if new_t_start < t_start:
+                        # If the word is aligned, we're done
+                        if len(t[new_t_start].al):
+                            break
+                        target_phrase = tuple(t[i].word for i in xrange(new_t_start, t_start))\
+                                + base_target_phrase
+
+                    for new_t_end in xrange(t_end, len(t)):
+                        if new_t_end > t_end:
+                            # If the word is aligned, we're done
+                            if len(t[new_t_end].al):
+                                break
+                            target_phrase += (t[new_t_end].word,)
+                        pairs.append((source_phrase, target_phrase))
+
 
         return pairs
 
 
     def phrase_alignment(self):
+        self.db = PhraseDB(self.db_path, True)
+        self.extract_phrases()
+
+        self.info('Loading the number of instances of each English phrase...')
+        dst_counts = {}
+        for dst_phrase, count in self.db.dst_phrases():
+            dst_counts[dst_phrase] = math.log(count)
+
+        self.info('Calculating phrases translation probabilities...')
+        num_phrases = self.db.phrases_count()
+        trans_probs = []
+        with progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ', progressbar.Bar()],
+                max_value=num_phrases) as pbar:
+            for i, (src, dst, count) in enumerate(self.db.phrases()):
+                prob = math.log(count) - dst_counts[dst]
+                trans_probs.append((src, dst, prob))
+                if len(trans_probs) >= 1000000:
+                    self.db.add_trans_probs(trans_probs)
+                    del trans_probs[:]
+                if (i % 1000) == 0:
+                    pbar.update(i)
+
+
+    def extract_phrases(self):
+        if not self.db.new:
+            return
+
         wa = codecs.open(self.final_wa_path, 'rb', 'UTF-8')
-        self.info('Extracting source pharses...')
+        self.info('Extracting phrases...')
 
         tot_lines = 0
         for l in wa:
             tot_lines += 1
         wa.seek(0, 0)
-        checkpoint = (tot_lines/3) / 100
-        print '0% done',
 
-        src_phrases = set()
-        try:
-            line = 0
-            while True:
-                line += 1
-                if (line % checkpoint) == 0:
-                    print '\r%d%% done' % (line/checkpoint),
-                s, t = self.read_sentence_alignment(wa)
-                for src_phrase in self.extract_phrase_pairs(s, t):
-                    #print ' '.join(src_phrase)
-                    src_phrases.add(src_phrase)
-                #break
-        except EOFError:
-            pass
-        print '\r           \r',
-        print 'Extracted', len(src_phrases), 'source phrases'
+        with progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ', progressbar.Bar()],
+                max_value=tot_lines/3) as pbar:
+            phrase_pairs = []
+            try:
+                for i in count(0):
+                    s, t = self.read_sentence_alignment(wa)
+                    phrase_pairs.extend(self.extract_phrase_pairs(s, t))
+
+                    if len(phrase_pairs) >= 1000000:
+                        self.db.add_phrase_pairs(phrase_pairs)
+                        del phrase_pairs[:]
+                    pbar.update(i)
+            except EOFError:
+                pass
         wa.close()
