@@ -66,6 +66,11 @@ class PhraseDB(object):
     def cursor(self):
         return self.conn.cursor()
 
+    def create_probs_index(self):
+        cur = self.conn.cursor()
+        cur.execute('CREATE INDEX IF NOT EXISTS phrase_probs_by_src ON phrase_pairs_probs(src)')
+        self.conn.commit()
+
     def add_phrase_pairs(self, pairs):
         cur = self.conn.cursor()
         for pair in pairs:
@@ -104,8 +109,14 @@ class PhraseDB(object):
     def dst_phrases_count(self):
         cur = self.conn.cursor()
         cur.execute('SELECT COUNT(*) FROM (SELECT DISTINCT dst FROM phrase_pairs) AS tmp')
-        #cur.execute('SELECT COUNT(DISTINCT dst) FROM phrase_pairs')
         return cur.fetchone()[0]
+
+    def get_translations(self, phrase):
+        cur = self.conn.cursor()
+        cur.execute('SELECT dst, prob FROM phrase_pairs_probs WHERE src=?',
+                (PhraseDB.canonicalize(phrase),))
+        for trans, prob in cur:
+            yield (phrase, PhraseDB.uncanonicalize(trans), prob)
 
     def close(self):
         self.conn.close()

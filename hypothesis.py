@@ -28,7 +28,7 @@ class Hypothesis(object):
 
     def get_translation(self):
         if self.last_added_phrase == None:
-            return ""
+            return tuple()
 
         trans = self.last_added_phrase.get_best_translation().translation
         if self.prev != None:
@@ -39,7 +39,7 @@ class Hypothesis(object):
 
     def _calc_translation_prob(self):
         if self.last_added_phrase == None:
-            self.translation_prob = 0
+            self.translation_prob = 0.0
             return
 
         self.translation_prob = self.prev.get_translation_prob() \
@@ -52,7 +52,7 @@ class Hypothesis(object):
         '''
         '''
         if self.last_added_phrase == None:
-            self.lm_prob = 0
+            self.lm_prob = 0.0
             return
 
         self.lm_prob = Hypothesis.lm.calc_prob(self.last_added_phrase.get_best_translation() \
@@ -62,7 +62,8 @@ class Hypothesis(object):
         self._calc_translation_prob()
         self._calc_lm_prob()
 
-        self.prob =  LAMBDA_TRANSLATION * self.translation_prob + LAMBDA_LM * self.lm_prob
+        self.prob = LAMBDA_TRANSLATION * self.translation_prob
+        self.prob += LAMBDA_LM * self.lm_prob
 
     def get_prob(self):
         return self.prob

@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+import cPickle
 import math
 import codecs
 import re
@@ -42,6 +43,15 @@ class PhraseTable(object):
         self.phrase_output = None
         self.final_wa_path = None
         self.db_path = os.path.join(self.alignment_folder, 'phrase.db')
+        self.db = None
+
+    def __getstate__(self):
+        return {'max_tokens': self.max_tokens, 'alignment_folder': self.alignment_folder}
+
+    def __setstate__(self, state):
+        self.__init__(**state)
+        self.db = PhraseDB(self.db_path, False)
+        self.db.create_probs_index()
 
     def _clean(self, source, target, source_cleaned, target_cleaned, m):
         self.info('Cleaning...')
@@ -293,9 +303,13 @@ class PhraseTable(object):
         self.db.phrase_pairs_available = True
 
     def translate(self, phrase):
-        #TODO implement
-        trans = 'we are the knighs who say "ni!"'
-        prob = 0
-        translations = []
-        translations.append(Translation(phrase, trans, prob))
+        phrase_can = PhraseDB.canonicalize(phrase)
+        translations =  list(Translation(*x) for x in self.db.get_translations(phrase))
         return translations
+
+    def save(self, path):
+        cPickle.dump(self, open(path, 'wb'), cPickle.HIGHEST_PROTOCOL)
+
+    @classmethod
+    def load(cls, path):
+        return cPickle.load(open(path, 'rb'))
