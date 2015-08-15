@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+import codecs
 from phrase import Phrase
 from tokenizer import tokenize
 
@@ -35,12 +36,14 @@ class TranslationLattice(object):
         The spans n-n refer to the tokens of the input Spanish sentence
         '''
         sentence = tokenize(sentence)
-        print sentence
         self.sentence = sentence
         for i in xrange(len(sentence)):
             for j in xrange(i, len(sentence)):
                 foreign = sentence[i:j+1]
                 p = Phrase(foreign, i, j)
+                translations = pt.translate(foreign)
+                if not translations:
+                    continue
                 p.set_translations(pt.translate(foreign))
                 self.phrases.append(p)
 
@@ -48,31 +51,28 @@ class TranslationLattice(object):
     def get_all_untranslated_phrases(self, translated_indexes):
         new_phrases = []
         for p in self.phrases:
-            flag = True
             for i in translated_indexes:
                 if p.start <= i and i <= p.end:
-                    flag = False
-                    continue
-            if flag:
+                    break
+            else:
                 new_phrases.append(p)
 
         return new_phrases
 
     def dump(self, output_file):
-        with open(output_file, 'wb') as f:
+        with codecs.open(output_file, 'wb', 'utf8') as f:
             # write sentence
             f.write('%s\n' % ' '.join(self.sentence))
             for phrase in self.phrases:
                 # write new phrase line
-                f.write('%d-%d:\n' % (phrase.start, phrase.end))
+                f.write('%d-%d:\n' % (phrase.start+1, phrase.end+1))
                 for trans in phrase.translations:
                     # write translation
                     f.write('%s %f\n'%(trans.translation, trans.prob))
 
 
     @staticmethod
-    def Load(f):
-
+    def load(f):
         sentence = None
         while True:
             # sentence
