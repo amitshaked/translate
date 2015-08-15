@@ -68,7 +68,7 @@ class Hypothesis(object):
         return self.prob
 
     def get_future_prob(self):
-        return Hypothesis.estimator.get_future_prob(self)
+        return Hypothesis.estimator.get_future_prob(self.get_foreign_covered_indexes())
 
     def is_empty(self):
         return self.last_added_phrase == None

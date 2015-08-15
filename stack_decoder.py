@@ -16,7 +16,7 @@ class StackDecoder(object):
 		self.hypothesis_stack = {}
 		self.number_of_foreign_words = len(self.lattice.sentence)
 		Hypothesis.AddLanguageModel(language_model)
-		Hypothesis.AddFutureProbEstimator(FutureProbEstimator(lattice.sentence))
+		Hypothesis.AddFutureProbEstimator(FutureProbEstimator(lattice, language_model))
 			
 
 	def decode(self):		
@@ -43,7 +43,7 @@ class StackDecoder(object):
 		returns all new hypotheses that can be derived from hyp
 		'''
 
-		new_phrases = self.lattice.get_all_untranslated_phrases(hyp.get_foreign_covered_indexes())
+		new_phrases = self.lattice.get_all_untranslated_possible_phrases(hyp.get_foreign_covered_indexes())
 		new_hyps = []
 		for phrase in new_phrases:
 			foreign_covered_indexes = range(phrase.start, phrase.end +1)

@@ -5,7 +5,7 @@ from tokenizer import tokenize
 class TranslationLattice(object):
     def __init__(self):
         self.sentence = None
-        self.phrases = []
+        self.phrases = {}
 
     def set_sentence(self, s):
         self.sentence = tokenize(s)
@@ -37,26 +37,47 @@ class TranslationLattice(object):
         sentence = tokenize(sentence)
         print sentence
         self.sentence = sentence
-        for i in xrange(len(sentence)):
-            for j in xrange(i, len(sentence)):
-                foreign = sentence[i:j+1]
+        for start in xrange(len(sentence)):
+        	self.phrases[start] = {}
+            for end in xrange(start+1, len(sentence)):
+                foreign = sentence[start:end]
                 p = Phrase(foreign, i, j)
                 p.set_translations(pt.translate(foreign))
-                self.phrases.append(p)
+                self.phrases[start][end] = p
 
 
-    def get_all_untranslated_phrases(self, translated_indexes):
-        new_phrases = []
-        for p in self.phrases:
-            flag = True
-            for i in translated_indexes:
-                if p.start <= i and i <= p.end:
-                    flag = False
-                    continue
-            if flag:
-                new_phrases.append(p)
+    def get_all_untranslated_possible_phrases(self, translated_indexes):
+        for start in self.phrases.indexes():
+        	for end in self.phrases[start].indexes():
+        		flag = True
+	            for i in translated_indexes:
+	                if start <= i and i <= end:
+	                    flag = False
+	                    continue
+	            if flag:
+	                new_phrases.append(p)
 
         return new_phrases
+
+    def get_untranslated_phrases(self, translated_indexes):
+        new_phrases = []
+        for i in translated_indexes:
+	        for start in xrange(len(self.sentence))
+	        	for end in xrange(start , len(self.sentence))
+	        		if end +1 >= i:
+	        			break
+        		new_phrases.append(self.phrases[start][end])
+        		start = i + 1
+
+        return new_phrases
+
+    def translate(self, start, end):
+    	'''
+    	return the best translation in the phrasetable for a given indexes if such exsits
+    	'''
+    	if start in self.phrases.indexes() and end in self.phrases[start].indexes()
+    		return self.phrases[start][end].get_best_translation()
+    	return None
 
     def dump(self, output_file):
         with open(output_file, 'wb') as f:

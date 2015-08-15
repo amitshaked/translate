@@ -6,7 +6,7 @@ class LanguageModel(object):
     def __init__(self, path):
         self.lm = cPickle.load(open(path, 'rb'))
 
-    def calc_prob(self, new_words, old_words):
+    def calc_prob(self, new_words, old_words = []):
         '''
         compute the phrase lg-probability
         '''

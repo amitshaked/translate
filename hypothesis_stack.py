@@ -43,8 +43,7 @@ class HypothesisStack(object):
 		key = hyp.prob + hyp.future_prob
 		'''
 		
-		self.hyps = self.hyps.sort(key=lambda hyp: hyp.get_prob() + hyp.get_future_prob(), reverse= True)[:size] 
-
+		self.hyps = sorted(self.hyps, key=lambda hyp: hyp.get_prob() + hyp.get_future_prob(), reverse= True)[:size]
 	def get_best_hypothesis(self):
 		if len(self.hyps) == 0:
 			return
