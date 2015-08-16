@@ -55,8 +55,9 @@ class Hypothesis(object):
             self.lm_prob = 0.0
             return
 
-        self.lm_prob = Hypothesis.lm.calc_prob(self.last_added_phrase.get_best_translation() \
-            ,self.prev.last_target_words )
+        self.lm_prob = Hypothesis.lm.calc_prob(
+                self.last_added_phrase.get_best_translation().translation,
+                self.prev.last_target_words)
 
     def _calc_prob(self):
         self._calc_translation_prob()

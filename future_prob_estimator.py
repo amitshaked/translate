@@ -1,6 +1,6 @@
 
 from collections import defaultdict
-from constant import *
+from constants import *
 
 class FutureProbEstimator(object):
     '''
@@ -14,12 +14,13 @@ class FutureProbEstimator(object):
         for length in xrange(1, len(lattice.sentence) + 1):
             for start in xrange(len(lattice.sentence) - length + 1):
                 end = start + length
-                self.lm_prob[start][end] = lm.calc_prob(lattice.sentence[start:end])
                 t = lattice.translate(start, end)
                 if t is not None:
                     self.translation_prob[start][end] = t.prob
+                    self.lm_prob[start][end] = lm.calc_prob(t.translation)
                 else:
                     self.translation_prob[start][end] = float("-infinity")
+                    self.lm_prob[start][end] = float('-infinity')
 
                 for i in xrange(start+1, end):
                     if self.translation_prob[start][i] + self.translation_prob[i][end] \

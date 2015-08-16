@@ -61,3 +61,6 @@ target/
 
 # Project specific
 files/*.cleaned*
+
+# Externals
+externals/kenlm

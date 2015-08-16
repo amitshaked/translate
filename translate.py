@@ -30,7 +30,7 @@ def main():
     best = decoder.decode()
 
     if best != None:
-        print "Best translation: %s\nScore: %d" % \
+        print "Best translation: %s\nScore: %.2f" % \
                 (' '.join(best.get_translation()), best.get_prob())
 
     return 0

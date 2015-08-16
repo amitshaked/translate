@@ -20,4 +20,4 @@ class Phrase(object):
                 return Translation(tuple(), tuple(), 0)
             else:
                 return Translation(tuple(), tuple(), float('-infinity'))
-        return self.translations[0]
+        return max(self.translations, key=lambda x: x.prob)

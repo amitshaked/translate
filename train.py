@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+import subprocess
 import os.path
 import cPickle
 import argparse
@@ -41,9 +42,10 @@ def create_language_model(corpus, lm_output):
         if raw_input('Language model already exists! Override [y/N]? ') != 'y':
             return
 
-    print 'Training 3-gram model...'
-    raise NotImplementedError()
-    # TODO
+    print 'Training %d-gram model...' % (NGRAM)
+    subprocess.call(['externals/kenlm/bin/lmplz', '-o', str(NGRAM), '-S', '20%',
+        '--text', corpus, '--arpa', lm_output + '.arpa'])
+    subprocess.call(['externals/kenlm/bin/build_binary', lm_output + '.arpa', lm_output])
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@
 import os
 import os.path
 import sqlite3
+from constants import *
 
 class PhraseDB(object):
     def __init__(self, dbpath, new=False):
@@ -111,10 +112,10 @@ class PhraseDB(object):
         cur.execute('SELECT COUNT(*) FROM (SELECT DISTINCT dst FROM phrase_pairs) AS tmp')
         return cur.fetchone()[0]
 
-    def get_translations(self, phrase):
+    def get_translations(self, phrase, limit=SEARCH_SIZE):
         cur = self.conn.cursor()
-        cur.execute('SELECT dst, prob FROM phrase_pairs_probs WHERE src=?',
-                (PhraseDB.canonicalize(phrase),))
+        cur.execute('SELECT dst, prob FROM phrase_pairs_probs WHERE src=? ORDER BY prob DESC LIMIT ?',
+                (PhraseDB.canonicalize(phrase), limit))
         for trans, prob in cur:
             yield (phrase, PhraseDB.uncanonicalize(trans), prob)
 
