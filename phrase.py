@@ -16,5 +16,8 @@ class Phrase(object):
 
     def get_best_translation(self):
         if self.translations == []:
-            return Translation(tuple(), tuple(), 0)
+            if self.start == self.end:
+                return Translation(tuple(), tuple(), 0)
+            else:
+                return Translation(tuple(), tuple(), float('-infinity'))
         return self.translations[0]

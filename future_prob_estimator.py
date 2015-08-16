@@ -12,17 +12,19 @@ class FutureProbEstimator(object):
         self.translation_prob = defaultdict(dict)
 
         for length in xrange(1, len(lattice.sentence) + 1):
-            for start in xrange(len(lattice.sentence) - length ):
+            for start in xrange(len(lattice.sentence) - length + 1):
                 end = start + length
                 self.lm_prob[start][end] = lm.calc_prob(lattice.sentence[start:end])
-                self.translation_prob[start][end] = float("-infinity")
                 t = lattice.translate(start, end)
                 if t is not None:
                     self.translation_prob[start][end] = t.prob
+                else:
+                    self.translation_prob[start][end] = float("-infinity")
+
                 for i in xrange(start+1, end):
-                    if self.translation_prob[start][i] + self.translation_prob[i+1][end] \
+                    if self.translation_prob[start][i] + self.translation_prob[i][end] \
                         < self.translation_prob[start][end]:
-                        self.translation_prob[start][end] = self.ranslation_prob[start][i] + translation_prob[i+1][end]
+                        self.translation_prob[start][end] = self.translation_prob[start][i] + self.translation_prob[i][end]
 
     def get_future_prob(self, foreign_covered_indexes):
         phrases = self.lattice.get_untranslated_phrases(foreign_covered_indexes)

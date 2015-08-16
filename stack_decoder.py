@@ -44,7 +44,7 @@ class StackDecoder(object):
         new_phrases = self.lattice.get_all_untranslated_possible_phrases(hyp.get_foreign_covered_indexes())
         new_hyps = []
         for phrase in new_phrases:
-            foreign_covered_indexes = range(phrase.start, phrase.end+1)
+            foreign_covered_indexes = range(phrase.start, phrase.end)
             last_target_words = hyp.get_translation() \
             + phrase.get_best_translation().translation [-(NGRAM -1):]
 

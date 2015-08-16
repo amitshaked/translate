@@ -39,12 +39,10 @@ class TranslationLattice(object):
         self.sentence = sentence
         for start in xrange(len(sentence)):
             self.phrases[start] = {}
-            for end in xrange(start, len(sentence)):
-                foreign = sentence[start:end+1]
+            for end in xrange(start+1, len(sentence)+1):
+                foreign = sentence[start:end]
                 p = Phrase(foreign, start, end)
                 translations = pt.translate(foreign)
-                if not translations:
-                    continue
                 p.set_translations(pt.translate(foreign))
                 self.phrases[start][end] = p
 
@@ -54,7 +52,7 @@ class TranslationLattice(object):
         for start in self.phrases.iterkeys():
             for end in self.phrases[start].iterkeys():
                 for i in translated_indexes:
-                    if start <= i and i <= end:
+                    if start <= i < end:
                         break
                 else:
                     new_phrases.append(self.phrases[start][end])
@@ -62,14 +60,14 @@ class TranslationLattice(object):
         return new_phrases
 
     def get_untranslated_phrases(self, translated_indexes):
+        all_indexes = sorted([-1] + translated_indexes + [len(self.sentence)])
+        ranges = [(all_indexes[i]+1, all_indexes[i+1]) for i in xrange(len(all_indexes)-1)]
+
         new_phrases = []
-        for i in translated_indexes:
-            for start in xrange(len(self.sentence)):
-                for end in xrange(start , len(self.sentence)):
-                    if end +1 >= i:
-                        break
-                new_phrases.append(self.phrases[start][end])
-                start = i + 1
+        for start, end in ranges:
+            if start == end:
+                continue
+            new_phrases.append(self.phrases[start][end])
 
         return new_phrases
 
@@ -88,7 +86,7 @@ class TranslationLattice(object):
             for start in self.phrases:
                 for phrase in self.phrases[start].itervalues():
                     # write new phrase line
-                    f.write('%d-%d:\n' % (phrase.start+1, phrase.end+1))
+                    f.write('%d-%d:\n' % (phrase.start+1, phrase.end))
                     for trans in phrase.translations:
                         # write translation
                         f.write('%s %f\n'%(trans.translation, trans.prob))
@@ -96,6 +94,7 @@ class TranslationLattice(object):
 
     @staticmethod
     def load(f):
+        #FIXME
         sentence = None
         while True:
             # sentence
