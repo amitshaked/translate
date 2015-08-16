@@ -41,7 +41,7 @@ class PhraseTable(object):
         self.alignment_folder = alignment_folder
         self.word_output = None
         self.phrase_output = None
-        self.final_wa_path = None
+        self.final_wa_paths = []
         self.db_path = os.path.join(self.alignment_folder, 'phrase.db')
         self.db = None
 
@@ -83,40 +83,56 @@ class PhraseTable(object):
         target_out.close()
 
     def word_alignment(self):
-        self.final_wa_path = os.path.join(self.alignment_folder, self.word_output) + '.A3.final'
-
-        if os.path.exists(self.final_wa_path):
-            if raw_input('Word alignment already exists! Override [y/N]? ') != 'y':
-                return
-
         cleaned_src_path = self.source_language_corpus_path + '.cleaned'
         cleaned_target_path = self.target_language_corpus_path + '.cleaned'
 
-        self._clean(self.source_language_corpus_path, self.target_language_corpus_path, cleaned_src_path, cleaned_target_path, self.max_tokens)
-
-        # Create snt files
-        self.info('Create snt files...')
-        subprocess.call([r'../tools/giza-pp/GIZA++-v2/plain2snt.out', cleaned_src_path, cleaned_target_path])
-
-        source_target_snt = cleaned_src_path + '_' + cleaned_target_path.split('/')[-1] + '.snt'
-
-        # Create cooc file
-        #self.info('Creating coocurrence file...')
-        #cooc_file_path = self.alignment_folder + '/' + 'cooc.cooc'
-        #subprocess.call(['../mgizapp/manual-compile/snt2cooc', cooc_file_path, cleaned_src_path+'.vcb', cleaned_target_path+'.vcb', source_target_snt])
+        if not (os.path.exists(cleaned_src_path) and os.path.exists(cleaned_target_path)) \
+                or raw_input('Cleaned files already exist! Override [y/N]? ') == 'y':
+            self._clean(self.source_language_corpus_path,
+                    self.target_language_corpus_path, cleaned_src_path,
+                    cleaned_target_path, self.max_tokens)
 
         # Create vcb.classes files
-        self.info('Create classes files...')
-        subprocess.call([r'../giza-pp/mkcls-v2/mkcls', '-p' + cleaned_src_path, '-V' + cleaned_target_path + '.vcb.classes'])
-        subprocess.call([r'../giza-pp/mkcls-v2/mkcls', '-p' + cleaned_target_path, '-V' + cleaned_src_path + '.vcb.classes'])
+        src_cls_path = cleaned_src_path + '.vcb.classes'
+        target_cls_path = cleaned_target_path + '.vcb.classes'
+        if not (os.path.exists(src_cls_path) and os.path.exists(target_cls_path)) \
+                or raw_input('Classes files already exist! Override [y/N]? ') == 'y':
+            self.info('Create classes files...')
+            subprocess.call([r'../giza-pp/mkcls-v2/mkcls', '-p' + cleaned_src_path, '-V' + src_cls_path])
+            subprocess.call([r'../giza-pp/mkcls-v2/mkcls', '-p' + cleaned_target_path, '-V' + target_cls_path])
+
+        src = os.path.split(self.source_language_corpus_path)[-1]
+        target = os.path.split(self.target_language_corpus_path)[-1]
+
+        # Create snt files
+        src_target_snt = cleaned_src_path + '_' + cleaned_target_path.split('/')[-1] + '.snt'
+        target_src_snt = cleaned_target_path + '_' + cleaned_src_path.split('/')[-1] + '.snt'
+
+        if not (os.path.exists(src_target_snt) and os.path.exists(target_src_snt)) \
+                or raw_input('SNT file already exist! Override [y/N]? ') == 'y':
+            self.info('Create snt files...')
+            subprocess.call([r'../tools/giza-pp/GIZA++-v2/plain2snt.out', cleaned_src_path, cleaned_target_path])
+
+        self.word_alignment_once(target, src, cleaned_target_path,
+                cleaned_src_path, target_src_snt)
+        self.word_alignment_once(src, target, cleaned_src_path,
+                cleaned_target_path, src_target_snt)
+
+    def word_alignment_once(self, src, target, cleaned_src_path, cleaned_target_path, snt_path):
+        self.final_wa_paths.append(os.path.join(self.alignment_folder, self.word_output) \
+                + '.' + src + '.' + target + '.A3.final')
+
+        if os.path.exists(self.final_wa_paths[-1]):
+            if raw_input('Word alignment already exists! Override [y/N]? ') != 'y':
+                return
 
         # Run word alignment
         self.info('Running word alinment...')
         subprocess.call([r'../tools/giza-pp/GIZA++-v2/GIZA++',
             '-S', cleaned_src_path + '.vcb',
             '-T', cleaned_target_path + '.vcb',
-            '-C', source_target_snt,
-            '-o', self.word_output,
+            '-C', snt_path,
+            '-o', self.word_output + '.' + src + '.' + target,
             '-outputpath', self.alignment_folder,
             ])
 
@@ -241,7 +257,6 @@ class PhraseTable(object):
 
         return pairs
 
-
     def phrase_alignment(self):
         self.db = PhraseDB(self.db_path, True)
         self.extract_phrases()
@@ -271,13 +286,13 @@ class PhraseTable(object):
 
 
     def extract_phrases(self):
-        if self.final_wa_path is None:
+        if not self.final_wa_paths:
             raise Exception('Word alignment path must be set before phrase alignment')
 
         if self.db.phrase_pairs_available:
             return
 
-        wa = codecs.open(self.final_wa_path, 'rb', 'UTF-8')
+        wa = codecs.open(self.final_wa_paths, 'rb', 'UTF-8')
         self.info('Extracting phrases...')
 
         tot_lines = 0
