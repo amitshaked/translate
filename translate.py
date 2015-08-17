@@ -31,7 +31,7 @@ def main():
 
     if best != None:
         print "Best translation: %s\nScore: %.2f" % \
-                (' '.join(best.get_translation()), best.get_prob())
+                (' '.join(best.get_translation()[1:]), best.get_prob())
 
     return 0
 

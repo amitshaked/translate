@@ -1,5 +1,7 @@
 #!/usr/bin/env python2.7
 from constants import *
+from phrase import Phrase
+from translation import Translation
 
 
 class Hypothesis(object):
@@ -13,11 +15,13 @@ class Hypothesis(object):
         an estimate of the future cost (is precomputed and stored for efficiency reasons)
     '''
     def __init__(self, prev, last_foreign_covered_indexes, \
-        last_added_phrase, last_target_words):
+        last_added_phrase, translation_index, last_target_words, eos=False):
         self.prev = prev
         self.last_foreign_covered_indexes = list(set(last_foreign_covered_indexes))
         self.last_added_phrase = last_added_phrase
+        self.translation_index = translation_index
         self.last_target_words = last_target_words
+        self.eos = eos
         self._calc_prob()
 
     def get_foreign_covered_indexes(self):
@@ -27,44 +31,46 @@ class Hypothesis(object):
             + self.last_foreign_covered_indexes))
 
     def get_translation(self):
-        if self.last_added_phrase == None:
+        if self.last_added_phrase is None:
             return tuple()
 
-        trans = self.last_added_phrase.get_best_translation().translation
-        if self.prev != None:
-            return self.prev.get_translation() + trans
+        trans = self.last_added_phrase.translations[self.translation_index].translation
+        if self.prev is not None:
+            trans = self.prev.get_translation() + trans
+        return trans
 
     def get_translation_prob(self):
         return self.translation_prob
 
     def _calc_translation_prob(self):
-        if self.last_added_phrase == None:
-            self.translation_prob = 0.0
-            return
-
-        self.translation_prob = self.prev.get_translation_prob() \
-         + self.last_added_phrase.get_best_translation().prob
+        self.translation_prob = self.last_added_phrase.translations[self.translation_index].prob
+        if self.prev is not None:
+            self.translation_prob += self.prev.get_translation_prob()
 
     def get_lm_prob(self):
-        return self.lm_prob
+        if self.prev is None:
+            return self.lm_prob
+        else:
+            return self.prev.get_lm_prob() + self.lm_prob
 
     def _calc_lm_prob(self):
-        '''
-        '''
-        if self.last_added_phrase == None:
-            self.lm_prob = 0.0
-            return
+        if self.prev is None:
+            prev_target_words = []
+        else:
+            prev_target_words = self.prev.last_target_words
 
-        self.lm_prob = Hypothesis.lm.calc_prob(
-                self.last_added_phrase.get_best_translation().translation,
-                self.prev.last_target_words)
+        trans = self.last_added_phrase.translations[self.translation_index].translation
+        if self.eos:
+            trans += (u'</s>',)
+
+        self.lm_prob = Hypothesis.lm.calc_prob(trans, prev_target_words)
 
     def _calc_prob(self):
         self._calc_translation_prob()
         self._calc_lm_prob()
 
-        self.prob = LAMBDA_TRANSLATION * self.translation_prob
-        self.prob += LAMBDA_LM * self.lm_prob
+        self.prob = LAMBDA_TRANSLATION * self.get_translation_prob()
+        self.prob += LAMBDA_LM * self.get_lm_prob()
 
     def get_prob(self):
         return self.prob
@@ -73,7 +79,7 @@ class Hypothesis(object):
         return Hypothesis.estimator.get_future_prob(self.get_foreign_covered_indexes())
 
     def is_empty(self):
-        return self.last_added_phrase == None
+        return self.prev is None
 
     @staticmethod
     def AddFutureProbEstimator(estimator):
@@ -82,4 +88,10 @@ class Hypothesis(object):
     @staticmethod
     def AddLanguageModel(lm):
         Hypothesis.lm = lm
+
+    @classmethod
+    def create_initial(cls):
+        initial_phrase = Phrase(None, None, None)
+        initial_phrase.translations = [Translation(None, (u'<s>',), 0)]
+        return cls(None, [], initial_phrase, 0, (u'<s>',))
 

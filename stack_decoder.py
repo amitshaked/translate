@@ -27,7 +27,7 @@ class StackDecoder(object):
             self.hypothesis_stack[i] = HypothesisStack(MAX_HISTOGRAMS)
 
         # create initial hypothesis
-        hyp_init = Hypothesis(None, [], None, [])
+        hyp_init = Hypothesis.create_initial()
         self.hypothesis_stack[0].push(hyp_init)
         for i in xrange(self.number_of_foreign_words):
             for hyp in self.hypothesis_stack[i]:
@@ -41,15 +41,18 @@ class StackDecoder(object):
         '''
         returns all new hypotheses that can be derived from hyp
         '''
-        new_phrases = self.lattice.get_all_untranslated_possible_phrases(hyp.get_foreign_covered_indexes())
+        prev_foreign_covered_indexes = hyp.get_foreign_covered_indexes()
+        new_phrases = self.lattice.get_all_untranslated_possible_phrases(prev_foreign_covered_indexes)
         new_hyps = []
         for phrase in new_phrases:
             foreign_covered_indexes = range(phrase.start, phrase.end)
-            last_target_words = hyp.get_translation() \
-            + phrase.get_best_translation().translation [-(NGRAM -1):]
-
-            new_hyps.append(Hypothesis(hyp, foreign_covered_indexes, phrase, \
-                last_target_words))
+            eos = len(foreign_covered_indexes) + len(prev_foreign_covered_indexes) \
+                    == self.number_of_foreign_words
+            for i in xrange(len(phrase.translations)):
+	            last_target_words = hyp.get_translation() \
+	            + phrase.translations[i].translation [-(NGRAM -1):]
+	            new_hyps.append(Hypothesis(hyp, foreign_covered_indexes, phrase, i, \
+	                last_target_words, eos))
 
         return new_hyps
 

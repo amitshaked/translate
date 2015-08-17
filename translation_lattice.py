@@ -42,8 +42,7 @@ class TranslationLattice(object):
             for end in xrange(start+1, len(sentence)+1):
                 foreign = sentence[start:end]
                 p = Phrase(foreign, start, end)
-                translations = pt.translate(foreign)
-                p.set_translations(pt.translate(foreign))
+                p.translations = pt.translate(foreign)
                 self.phrases[start][end] = p
 
 
@@ -73,11 +72,11 @@ class TranslationLattice(object):
 
     def translate(self, start, end):
         '''
-        return the best translation in the phrasetable for a given indexes if such exsits
+        return the translations in the phrasetable for a given indexes if such exsits
         '''
         if start in self.phrases.iterkeys() and end in self.phrases[start].iterkeys():
-            return self.phrases[start][end].get_best_translation()
-        return None
+            return self.phrases[start][end].translations
+        return []
 
     def dump(self, output_file):
         with codecs.open(output_file, 'wb', 'utf8') as f:
