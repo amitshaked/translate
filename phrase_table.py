@@ -40,7 +40,6 @@ class PhraseTable(object):
         self.target_language_corpus_path = None
         self.alignment_folder = alignment_folder
         self.word_output = None
-        self.phrase_output = None
         self.final_wa_path = None
         self.db_path = os.path.join(self.alignment_folder, 'phrase.db')
         self.db = None
