@@ -1,4 +1,0 @@
-[submodule "python-progressbar"]
-	path = externals/python-progressbar
-	url = git@github.com:WoLpH/python-progressbar.git
-	branch = master
