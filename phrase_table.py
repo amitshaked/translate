@@ -7,8 +7,8 @@ import os.path
 import subprocess
 import operator
 from itertools import count
-import progressbar
-import tokenizer
+from progressbar import ProgressBar
+from tokenizer import tokenize
 from translation import Translation
 from db import PhraseDB
 
@@ -60,7 +60,11 @@ class PhraseTable(object):
         source_out = codecs.open(source_cleaned, 'wb', 'utf-8')
         target_out = codecs.open(target_cleaned, 'wb', 'utf-8')
 
-        while True:
+        for num_lines, _ in enumerate(source_in): pass
+        source_in.seek(0, 0)
+
+        pbar = ProgressBar(maxval=num_lines).start()
+        for l in count(0):
             source_line = source_in.readline()
             target_line = target_in.readline()
 
@@ -76,6 +80,8 @@ class PhraseTable(object):
 
             source_out.write(' '.join(source_tokens) + '\n')
             target_out.write(' '.join(target_tokens) + '\n')
+            pbar.update(l)
+        pbar.finish()
 
         source_in.close()
         target_in.close()
@@ -272,16 +278,16 @@ class PhraseTable(object):
         self.info('Calculating phrases translation probabilities...')
         num_phrases = self.db.phrases_count()
         trans_probs = []
-        with progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ', progressbar.Bar()],
-                max_value=num_phrases) as pbar:
-            for i, (src, dst, count) in enumerate(self.db.phrases()):
-                prob = math.log(count) - dst_counts[dst]
-                trans_probs.append((src, dst, prob))
-                if len(trans_probs) >= 1000000:
-                    self.db.add_trans_probs(trans_probs)
-                    del trans_probs[:]
-                if (i % 1000) == 0:
-                    pbar.update(i)
+        pbar = ProgressBar(maxval=num_phrases).start()
+        for i, (src, dst, count) in enumerate(self.db.phrases()):
+            prob = math.log(count) - dst_counts[dst]
+            trans_probs.append((src, dst, prob))
+            if len(trans_probs) >= 1000000:
+                self.db.add_trans_probs(trans_probs)
+                del trans_probs[:]
+            if (i % 1000) == 0:
+                pbar.update(i)
+        pbar.finish()
         self.db.trans_probs_available = True
 
 
@@ -300,19 +306,19 @@ class PhraseTable(object):
             tot_lines += 1
         wa.seek(0, 0)
 
-        with progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ', progressbar.Bar()],
-                max_value=tot_lines/3) as pbar:
-            phrase_pairs = []
-            try:
-                for i in count(0):
-                    s, t = self.read_sentence_alignment(wa)
-                    phrase_pairs.extend(self.extract_phrase_pairs(s, t))
-                    if len(phrase_pairs) >= 1000000:
-                        self.db.add_phrase_pairs(phrase_pairs)
-                        del phrase_pairs[:]
-                    pbar.update(i)
-            except EOFError:
-                pass
+        pbar = ProgressBar(maxval=tot_lines/3).start()
+        phrase_pairs = []
+        try:
+            for i in count(0):
+                s, t = self.read_sentence_alignment(wa)
+                phrase_pairs.extend(self.extract_phrase_pairs(s, t))
+                if len(phrase_pairs) >= 1000000:
+                    self.db.add_phrase_pairs(phrase_pairs)
+                    del phrase_pairs[:]
+                pbar.update(i)
+        except EOFError:
+            pass
+        pbar.finish()
         wa.close()
 
         self.db.phrase_pairs_available = True
