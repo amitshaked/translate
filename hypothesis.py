@@ -2,6 +2,7 @@
 from constants import *
 from phrase import Phrase
 from translation import Translation
+import math
 
 
 class Hypothesis(object):
@@ -20,7 +21,7 @@ class Hypothesis(object):
         self.last_added_phrase = last_added_phrase
         self.translation_index = translation_index
         self.last_target_words = last_target_words
-        self.eos = eos
+        self.eos = eos        
         self._calc_prob()
         self._calc_foreign_covered_indexes()
 
@@ -53,29 +54,46 @@ class Hypothesis(object):
             self.translation_prob += self.prev.get_translation_prob()
 
     def get_lm_prob(self):
-        if self.prev is None:
-            return self.lm_prob
-        else:
-            return self.prev.get_lm_prob() + self.lm_prob
+        return self.lm_prob
 
     def _calc_lm_prob(self):
         if self.prev is None:
             prev_target_words = []
+            prev_prob = 0
         else:
             prev_target_words = self.prev.last_target_words
+            prev_prob = self.prev.get_lm_prob()
 
         trans = self.last_added_phrase.translations[self.translation_index].translation
         if self.eos:
             trans += (u'</s>',)
 
-        self.lm_prob = Hypothesis.lm.calc_prob(trans, prev_target_words)
+        self.lm_prob = prev_prob + Hypothesis.lm.calc_prob(trans, prev_target_words)
+
+    def get_reorder_dist(self):
+        return self.reorder_dist
+
+    def _calc_reorder_dist(self):
+        if self.prev is None:
+            self.reorder_dist = 0 # empty hypothesis
+            
+        elif self.prev.prev is None:
+            self.reorder_dist = 0 # first hypotesis
+        else:
+            self.reorder_dist = self.prev.get_reorder_dist() \
+             + math.fabs(self.last_added_phrase.start - self.prev.last_added_phrase.end -1)            
+
 
     def _calc_prob(self):
         self._calc_translation_prob()
         self._calc_lm_prob()
+        self._calc_reorder_dist()
 
         self.prob = LAMBDA_TRANSLATION * self.get_translation_prob()
         self.prob += LAMBDA_LM * self.get_lm_prob()
+        self.prob += LAMBDA_REORDER * self.get_reorder_dist()
+
+        self.prob += LAMBDA_LENGTH * len(self.get_translation())
 
     def get_prob(self):
         return self.prob
