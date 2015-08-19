@@ -14,21 +14,26 @@ class Hypothesis(object):
         the cost so far
         an estimate of the future cost (is precomputed and stored for efficiency reasons)
     '''
-    def __init__(self, prev, last_foreign_covered_indexes, \
-        last_added_phrase, translation_index, last_target_words, eos=False):
+    def __init__(self, prev, last_added_phrase, translation_index, 
+        last_target_words, eos=False):
         self.prev = prev
-        self.last_foreign_covered_indexes = list(set(last_foreign_covered_indexes))
         self.last_added_phrase = last_added_phrase
         self.translation_index = translation_index
         self.last_target_words = last_target_words
         self.eos = eos
         self._calc_prob()
+        self._calc_foreign_covered_indexes()
+
+    def _calc_foreign_covered_indexes(self):
+        if self.prev is None:
+            self.foreign_covered_indexes =set()
+        else:
+            self.foreign_covered_indexes = set(range(self.last_added_phrase.start, self.last_added_phrase.end))\
+                .union(self.prev.get_foreign_covered_indexes())
+        
 
     def get_foreign_covered_indexes(self):
-        if self.prev == None:
-            return self.last_foreign_covered_indexes
-        return list(set(self.prev.get_foreign_covered_indexes() \
-            + self.last_foreign_covered_indexes))
+        return self.foreign_covered_indexes
 
     def get_translation(self):
         if self.last_added_phrase is None:
@@ -93,5 +98,5 @@ class Hypothesis(object):
     def create_initial(cls):
         initial_phrase = Phrase(None, None, None)
         initial_phrase.translations = [Translation(None, (u'<s>',), 0)]
-        return cls(None, [], initial_phrase, 0, (u'<s>',))
+        return cls(None, initial_phrase, 0, (u'<s>',))
 

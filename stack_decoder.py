@@ -45,13 +45,13 @@ class StackDecoder(object):
         new_phrases = self.lattice.get_all_untranslated_possible_phrases(prev_foreign_covered_indexes)
         new_hyps = []
         for phrase in new_phrases:
-            foreign_covered_indexes = range(phrase.start, phrase.end)
-            eos = len(foreign_covered_indexes) + len(prev_foreign_covered_indexes) \
+            foreign_covered_indexes_len = phrase.end - phrase.start + 1
+            eos = foreign_covered_indexes_len + len(prev_foreign_covered_indexes) \
                     == self.number_of_foreign_words
             for i in xrange(len(phrase.translations)):
 	            last_target_words = hyp.get_translation() \
 	            + phrase.translations[i].translation [-(NGRAM -1):]
-	            new_hyps.append(Hypothesis(hyp, foreign_covered_indexes, phrase, i, \
+	            new_hyps.append(Hypothesis(hyp, phrase, i, \
 	                last_target_words, eos))
 
         return new_hyps
