@@ -59,7 +59,7 @@ class TranslationLattice(object):
         return new_phrases
 
     def get_untranslated_phrases(self, translated_indexes):
-        all_indexes = sorted([-1] + translated_indexes + [len(self.sentence)])
+        all_indexes = sorted([-1] + list(translated_indexes) + [len(self.sentence)])
         ranges = [(all_indexes[i]+1, all_indexes[i+1]) for i in xrange(len(all_indexes)-1)]
 
         new_phrases = []
