@@ -78,10 +78,10 @@ class Hypothesis(object):
             self.reorder_dist = 0 # empty hypothesis
             
         elif self.prev.prev is None:
-            self.reorder_dist = 0 # first hypotesis
+            self.reorder_dist = self.last_added_phrase.start # first hypotesis
         else:
             self.reorder_dist = self.prev.get_reorder_dist() \
-             + math.fabs(self.last_added_phrase.start - self.prev.last_added_phrase.end -1)            
+             + math.fabs(self.last_added_phrase.start - self.prev.last_added_phrase.end)            
 
 
     def _calc_prob(self):
