@@ -50,7 +50,6 @@ def main():
         pt.target_language_corpus_path = args.target_language_corpus_path
         pt.word_output = args.word_output
 
-        # TODO: Symmetrization
         pt.word_alignment()
         pt.phrase_alignment()
         pt.save(args.phrase_table)

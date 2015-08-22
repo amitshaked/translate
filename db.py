@@ -41,9 +41,9 @@ class PhraseDB(object):
         return bool(cur.fetchone()[0])
 
     @phrase_pairs_available.setter
-    def update_phrase_pairs_available(self, val):
+    def phrase_pairs_available(self, val):
         cur = self.conn.cursor()
-        cur.execute('UPDATE properties SET val=? WHERE key=\'pairs_available\'', int(val))
+        cur.execute('UPDATE properties SET val=? WHERE key=\'pairs_available\'', (int(val),))
 
     @property
     def trans_probs_available(self):
@@ -52,9 +52,9 @@ class PhraseDB(object):
         return bool(cur.fetchone()[0])
 
     @trans_probs_available.setter
-    def update_trans_probs_available(self, val):
+    def trans_probs_available(self, val):
         cur = self.conn.cursor()
-        cur.execute('UPDATE properties SET val=? WHERE key=\'probs_available\'', int(val))
+        cur.execute('UPDATE properties SET val=? WHERE key=\'probs_available\'', (int(val),))
 
     def create_db(self):
         cur = self.conn.cursor()
