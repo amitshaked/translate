@@ -27,7 +27,6 @@ def main():
     pt.word_output = args.word_output
     pt.phrase_output = args.phrase_output
 
-    # TODO: Symmetrization
     pt.word_alignment()
     pt.phrase_alignment()
     pt.save(args.phrase_table)

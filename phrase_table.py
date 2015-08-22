@@ -129,7 +129,8 @@ class PhraseTable(object):
                 + '.' + src + '.' + target + '.A3.final')
 
         if os.path.exists(self.final_wa_paths[-1]):
-            if raw_input('Word alignment already exists! Override [y/N]? ') != 'y':
+            fname = os.path.split(self.final_wa_paths[-1])[-1]
+            if raw_input('Word alignment %s already exists! Override [y/N]? ' % fname) != 'y':
                 return
 
         # Run word alignment
@@ -298,20 +299,23 @@ class PhraseTable(object):
         if self.db.phrase_pairs_available:
             return
 
-        wa = codecs.open(self.final_wa_paths, 'rb', 'UTF-8')
+        wa = [codecs.open(x, 'rb', 'UTF-8') for x in self.final_wa_paths]
         self.info('Extracting phrases...')
 
         tot_lines = 0
-        for l in wa:
+        for l in wa[0]:
             tot_lines += 1
-        wa.seek(0, 0)
+        wa[0].seek(0, 0)
 
         pbar = ProgressBar(maxval=tot_lines/3).start()
         phrase_pairs = []
         try:
             for i in count(0):
-                s, t = self.read_sentence_alignment(wa)
-                phrase_pairs.extend(self.extract_phrase_pairs(s, t))
+                sentence_pairs = [self.read_sentence_alignment(f) for f in wa]
+                pair = self.symmetrize(*sentence_pairs)
+                if pair is None:
+                    continue
+                phrase_pairs.extend(self.extract_phrase_pairs(*pair))
                 if len(phrase_pairs) >= 1000000:
                     self.db.add_phrase_pairs(phrase_pairs)
                     del phrase_pairs[:]
@@ -319,9 +323,32 @@ class PhraseTable(object):
         except EOFError:
             pass
         pbar.finish()
-        wa.close()
+        for f in wa:
+            f.close()
 
         self.db.phrase_pairs_available = True
+
+    def symmetrize(self, pair0, pair1):
+        '''
+        Symmetrize both sentence pairs into a single sentence pair, using union method
+
+        This method works in-place -- alters the first pair
+        '''
+        s0, t0 = pair0
+        s1, t1 = pair1
+
+        if len(s0) != len(t1) or len(s1) != len(t0):
+            return None
+
+        for i in xrange(len(s0)):
+            assert s0[i].word == t1[i].word
+            s0[i].al |= t1[i].al
+
+        for i in xrange(len(t0)):
+            assert t0[i].word == s1[i].word
+            t0[i].al |= s1[i].al
+
+        return pair0
 
     def translate(self, phrase):
         phrase_can = PhraseDB.canonicalize(phrase)
