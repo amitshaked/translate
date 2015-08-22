@@ -2,6 +2,8 @@
 
 NGRAM = 3 # the order of the language model (ngram size)
 
+MAX_PHRASE_LEN = 7
+
 MAX_HISTOGRAMS = 30 #Histogram pruning keeps a certain number n of hypotheses
 
 LAMBDA_TRANSLATION = 0.5

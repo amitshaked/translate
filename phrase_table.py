@@ -11,8 +11,7 @@ from progressbar import ProgressBar
 from tokenizer import tokenize
 from translation import Translation
 from db import PhraseDB
-
-MAX_PHRASE_LEN = 7
+from constants import *
 
 
 class Word(object):
