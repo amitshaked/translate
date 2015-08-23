@@ -52,6 +52,7 @@ def main():
 
         pt.word_alignment()
         pt.phrase_alignment()
+        pt.create_index()
         pt.save(args.phrase_table)
 
     if args.lm_output is not None:

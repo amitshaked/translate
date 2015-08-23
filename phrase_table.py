@@ -49,7 +49,6 @@ class PhraseTable(object):
     def __setstate__(self, state):
         self.__init__(**state)
         self.db = PhraseDB(self.db_path, False)
-        self.db.create_probs_index()
 
     def _clean(self, source, target, source_cleaned, target_cleaned, m):
         self.info('Cleaning...')
@@ -85,6 +84,10 @@ class PhraseTable(object):
         target_in.close()
         source_out.close()
         target_out.close()
+
+    def create_index(self):
+        print 'Creating index...'
+        self.db.create_probs_index()
 
     def word_alignment(self):
         cleaned_src_path = self.source_language_corpus_path + '.cleaned'
