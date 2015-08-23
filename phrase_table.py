@@ -120,10 +120,11 @@ class PhraseTable(object):
             self.info('Create snt files...')
             subprocess.call([r'../tools/giza-pp/GIZA++-v2/plain2snt.out', cleaned_src_path, cleaned_target_path])
 
-        self.word_alignment_once(target, src, cleaned_target_path,
-                cleaned_src_path, target_src_snt)
+        # First word alignment is the 'primary' direction
         self.word_alignment_once(src, target, cleaned_src_path,
                 cleaned_target_path, src_target_snt)
+        self.word_alignment_once(target, src, cleaned_target_path,
+                cleaned_src_path, target_src_snt)
 
     def word_alignment_once(self, src, target, cleaned_src_path, cleaned_target_path, snt_path):
         self.final_wa_paths.append(os.path.join(self.alignment_folder, self.word_output) \
@@ -333,7 +334,8 @@ class PhraseTable(object):
         '''
         Symmetrize both sentence pairs into a single sentence pair, using union method
 
-        This method works in-place -- alters the first pair
+        This method works in-place -- alters the first pair (it assumes the
+        first pair is the 'primary' translation direction)
         '''
         s0, t0 = pair0
         s1, t1 = pair1
