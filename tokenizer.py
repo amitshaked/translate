@@ -10,4 +10,4 @@ def tokenize(s):
     #def convert(x):
     #    return re.sub('[^a-zA-Z]', '', x).lower()
     #return filter(is_word, map(convert, re.findall(r"[\w'.]+", s)))
-    return re.findall(r"[\w']+", s.lower(), re.UNICODE)
+    return re.findall(r"[\w']+|,", s.lower(), re.UNICODE)
