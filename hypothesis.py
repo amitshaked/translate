@@ -5,6 +5,9 @@ from translation import Translation
 import math
 
 
+LG_REORDER_ALPHA = math.log(REORDER_ALPHA)
+
+
 class Hypothesis(object):
     '''
     Each search state (hypothesis) is represented by
@@ -15,13 +18,13 @@ class Hypothesis(object):
         the cost so far
         an estimate of the future cost (is precomputed and stored for efficiency reasons)
     '''
-    def __init__(self, prev, last_added_phrase, translation_index, 
+    def __init__(self, prev, last_added_phrase, translation_index,
         last_target_words, eos=False):
         self.prev = prev
         self.last_added_phrase = last_added_phrase
         self.translation_index = translation_index
         self.last_target_words = last_target_words
-        self.eos = eos        
+        self.eos = eos
         self._calc_prob()
         self._calc_foreign_covered_indexes()
 
@@ -31,7 +34,7 @@ class Hypothesis(object):
         else:
             self.foreign_covered_indexes = set(range(self.last_added_phrase.start, self.last_added_phrase.end))\
                 .union(self.prev.get_foreign_covered_indexes())
-        
+
 
     def get_foreign_covered_indexes(self):
         return self.foreign_covered_indexes
@@ -76,12 +79,12 @@ class Hypothesis(object):
     def _calc_reorder_dist(self):
         if self.prev is None:
             self.reorder_dist = 0 # empty hypothesis
-            
+
         elif self.prev.prev is None:
             self.reorder_dist = self.last_added_phrase.start # first hypotesis
         else:
             self.reorder_dist = self.prev.get_reorder_dist() \
-             + math.fabs(self.last_added_phrase.start - self.prev.last_added_phrase.end)            
+             + math.fabs(self.last_added_phrase.start - self.prev.last_added_phrase.end)
 
 
     def _calc_prob(self):
@@ -91,7 +94,7 @@ class Hypothesis(object):
 
         self.prob = LAMBDA_TRANSLATION * self.get_translation_prob()
         self.prob += LAMBDA_LM * self.get_lm_prob()
-        self.prob += LAMBDA_REORDER * self.get_reorder_dist()
+        self.prob += LAMBDA_REORDER * LG_REORDER_ALPHA * self.get_reorder_dist()
 
         self.prob += LAMBDA_LENGTH * len(self.get_translation())
 
