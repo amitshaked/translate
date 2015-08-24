@@ -15,9 +15,9 @@ from constants import *
 
 
 class Word(object):
-    def __init__(self, word):
+    def __init__(self, word, al=[]):
         self.word = word
-        self.al = set()
+        self.al = set(al)
 
     def __repr__(self):
         return "%s { %s }" % (self.word.encode('utf-8'), ' '.join(str(x+1) for x in self.al))
@@ -105,8 +105,8 @@ class PhraseTable(object):
         if not (os.path.exists(src_cls_path) and os.path.exists(target_cls_path)) \
                 or raw_input('Classes files already exist! Override [y/N]? ') == 'y':
             self.info('Create classes files...')
-            subprocess.call([r'../giza-pp/mkcls-v2/mkcls', '-p' + cleaned_src_path, '-V' + src_cls_path])
-            subprocess.call([r'../giza-pp/mkcls-v2/mkcls', '-p' + cleaned_target_path, '-V' + target_cls_path])
+            subprocess.call([r'externals/giza-pp/mkcls-v2/mkcls', '-p' + cleaned_src_path, '-V' + src_cls_path])
+            subprocess.call([r'externals/giza-pp/mkcls-v2/mkcls', '-p' + cleaned_target_path, '-V' + target_cls_path])
 
         src = os.path.split(self.source_language_corpus_path)[-1]
         target = os.path.split(self.target_language_corpus_path)[-1]
@@ -118,13 +118,16 @@ class PhraseTable(object):
         if not (os.path.exists(src_target_snt) and os.path.exists(target_src_snt)) \
                 or raw_input('SNT file already exist! Override [y/N]? ') == 'y':
             self.info('Create snt files...')
-            subprocess.call([r'../tools/giza-pp/GIZA++-v2/plain2snt.out', cleaned_src_path, cleaned_target_path])
+            subprocess.call([r'externals/giza-pp/GIZA++-v2/plain2snt.out', cleaned_src_path, cleaned_target_path])
 
         # First word alignment is the 'primary' direction
-        self.word_alignment_once(src, target, cleaned_src_path,
+        src_target_wa = self.word_alignment_once(src, target, cleaned_src_path,
                 cleaned_target_path, src_target_snt)
-        self.word_alignment_once(target, src, cleaned_target_path,
+        target_src_wa = self.word_alignment_once(target, src, cleaned_target_path,
                 cleaned_src_path, target_src_snt)
+
+        src_target_wa.communicate()
+        target_src_wa.communicate()
 
     def word_alignment_once(self, src, target, cleaned_src_path, cleaned_target_path, snt_path):
         self.final_wa_paths.append(os.path.join(self.alignment_folder, self.word_output) \
@@ -136,14 +139,15 @@ class PhraseTable(object):
                 return
 
         # Run word alignment
-        self.info('Running word alinment...')
-        subprocess.call([r'../tools/giza-pp/GIZA++-v2/GIZA++',
+        self.info('Running word alinment from %s to %s...' % (src, target))
+        log_file = open(os.path.join(self.alignment_folder, 'word_align_%s_%s.log' % (src, target)), 'wb')
+        return subprocess.Popen([r'externals/giza-pp/GIZA++-v2/GIZA++',
             '-S', cleaned_src_path + '.vcb',
             '-T', cleaned_target_path + '.vcb',
             '-C', snt_path,
             '-o', self.word_output + '.' + src + '.' + target,
             '-outputpath', self.alignment_folder,
-            ])
+            ], stdout=log_file, stderr=log_file)
 
     def read_sentence_alignment(self, f):
         comment = f.readline()
@@ -330,28 +334,58 @@ class PhraseTable(object):
 
         self.db.phrase_pairs_available = True
 
+    @staticmethod
+    def neighbours(i, j, width, height):
+        if i > 0:
+            yield (i-1, j)
+        if i < width-1:
+            yield (i+1, j)
+        if j > 0:
+            yield (i, j-1)
+        if j < height-1:
+            yield (i, j+1)
+
     def symmetrize(self, pair0, pair1):
         '''
-        Symmetrize both sentence pairs into a single sentence pair, using union method
-
-        This method works in-place -- alters the first pair (it assumes the
-        first pair is the 'primary' translation direction)
+        Symmetrize both sentence pairs into a single sentence pair, using 'grow-final' method
         '''
         s0, t0 = pair0
         s1, t1 = pair1
 
         if len(s0) != len(t1) or len(s1) != len(t0):
             return None
+        src_len = len(s0)
+        dst_len = len(s1)
 
-        for i in xrange(len(s0)):
-            assert s0[i].word == t1[i].word
-            s0[i].al |= t1[i].al
+        # Calculate union
+        u_s = [Word(s0[i].word, s0[i].al | t1[i].al) for i in xrange(src_len)]
 
-        for i in xrange(len(t0)):
-            assert t0[i].word == s1[i].word
-            t0[i].al |= s1[i].al
+        # Start with the intersection
+        s = [Word(s0[i].word, s0[i].al & t1[i].al) for i in xrange(src_len)]
+        t = [Word(t0[i].word, t0[i].al & s1[i].al) for i in xrange(dst_len)]
 
-        return pair0
+        # GROW heuristic
+        stack = []
+        for i in xrange(src_len):
+            for j in s[i].al:
+                stack.append((i,j))
+        while len(stack):
+            i, j = stack.pop()
+            for new_i, new_j in PhraseTable.neighbours(i, j, src_len, dst_len):
+                if (len(s[new_i].al) == 0 or len(t[new_j].al) == 0) and new_j in u_s[new_i].al:
+                    t[j].al.add(i)
+                    s[new_i].al.add(new_j)
+                    t[new_j].al.add(new_i)
+                    stack.append((new_i, new_j))
+
+        # FINAL heuristic
+        for i in xrange(src_len):
+            for j in u_s[i].al:
+                if len(s[i].al) == 0 or len(t[j].al) == 0:
+                    s[i].al.add(j)
+                    t[j].al.add(i)
+
+        return s, t
 
     def translate(self, phrase):
         phrase_can = PhraseDB.canonicalize(phrase)
