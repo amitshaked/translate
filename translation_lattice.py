@@ -1,6 +1,7 @@
 #!/usr/bin/env python2.7
 import codecs
 from phrase import Phrase
+from translation import Translation
 from tokenizer import tokenize
 
 class TranslationLattice(object):
@@ -42,7 +43,10 @@ class TranslationLattice(object):
             for end in xrange(start+1, len(sentence)+1):
                 foreign = sentence[start:end]
                 p = Phrase(foreign, start, end)
-                p.translations = pt.translate(foreign)
+                if len(foreign) == 1 and foreign[0] == ',':
+                    p.translations = [Translation(foreign, (',',), 0)]
+                else:
+                    p.translations = pt.translate(foreign)
                 self.phrases[start][end] = p
 
 

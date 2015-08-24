@@ -30,8 +30,17 @@ def main():
     best = decoder.decode()
 
     if best != None:
-        translation = ' '.join(best.get_translation()[1:])
-        translation = translation[0].upper() + translation[1:] + '.'
+        translation = best.get_translation()[1:]  # skip <s>
+        while len(translation) and translation[0] == ',':
+            translation = translation[1:]
+        while len(translation) and translation[-1] == ',':
+            translation = translation[:-1]
+        translation = ' '.join(translation)
+        translation = translation.replace(' ,', ',')
+        if len(translation):
+            translation = translation[0].upper() + translation[1:]
+        if args.sentence[-1] == '.' or args.sentence[-1] == '?':
+            translation += args.sentence[-1]
         print "Best translation: %s\nScore: %.2f" % (translation, best.get_prob())
 
     return 0
