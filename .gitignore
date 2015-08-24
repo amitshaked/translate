@@ -63,4 +63,4 @@ target/
 files/*.cleaned*
 
 # Externals
-externals/kenlm
+externals/
