@@ -5,8 +5,10 @@ import cPickle
 import argparse
 import sys
 import phrase_table
-from nltk.probability import LidstoneProbDist, WittenBellProbDist
+from itertools import count
+from progressbar import ProgressBar
 from collections import namedtuple
+from tokenizer import tokenize
 from constants import *
 
 def main():
@@ -64,13 +66,34 @@ def main():
     return 0
 
 def create_language_model(corpus, lm_output):
+    corpus_token = corpus + '.cleaned'
+    if not os.path.exists(corpus_token) or raw_input('Cleaned LM corpus already exists! Override [y/N]? ') == 'y':
+        print 'Cleaning corpus file...'
+        corpus_f = open(corpus, 'rb')
+        corpus_token_f = open(corpus_token, 'wb')
+        for line_count, _ in enumerate(corpus_f): pass
+        corpus_f.seek(0, 0)
+
+        pbar = ProgressBar(maxval=line_count).start()
+        for l in count(0):
+            line = corpus_f.readline()
+            if not line:
+                break
+            line_tokens = tokenize(line)
+            corpus_token_f.write(' '.join(line_tokens) + '\n')
+            pbar.update(l)
+        pbar.finish()
+
+        corpus_f.close()
+        corpus_token_f.close()
+
     if os.path.exists(lm_output):
         if raw_input('Language model already exists! Override [y/N]? ') != 'y':
             return
 
     print 'Training %d-gram model...' % (NGRAM)
     subprocess.call(['externals/kenlm/bin/lmplz', '-o', str(NGRAM), '-S', '20%',
-        '--text', corpus, '--arpa', lm_output + '.arpa'])
+        '--text', corpus_token, '--arpa', lm_output + '.arpa'])
     subprocess.call(['externals/kenlm/bin/build_binary', lm_output + '.arpa', lm_output])
 
 
