@@ -92,9 +92,9 @@ def create_language_model(corpus, lm_output):
             return
 
     print 'Training %d-gram model...' % (NGRAM)
-    subprocess.call(['externals/kenlm/bin/lmplz', '-o', str(NGRAM), '-S', '20%',
+    subprocess.call(['lmplz', '-o', str(NGRAM), '-S', '20%',
         '--text', corpus_token, '--arpa', lm_output + '.arpa'])
-    subprocess.call(['externals/kenlm/bin/build_binary', lm_output + '.arpa', lm_output])
+    subprocess.call(['build_binary', lm_output + '.arpa', lm_output])
 
 
 if __name__ == '__main__':
