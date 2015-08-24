@@ -1,5 +1,5 @@
 #!/bin/sh
-mkdir externals
+mkdir -p externals
 cd externals
 wget -O - http://kheafield.com/code/kenlm.tar.gz |tar xz
 cd kenlm
