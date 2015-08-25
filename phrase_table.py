@@ -139,7 +139,7 @@ class PhraseTable(object):
                 return
 
         # Run word alignment
-        self.info('Running word alinment from %s to %s...' % (src, target))
+        self.info('Running word alignment from %s to %s...' % (src, target))
         log_file = open(os.path.join(self.alignment_folder, 'word_align_%s_%s.log' % (src, target)), 'wb')
         return subprocess.Popen([r'externals/giza-pp/GIZA++-v2/GIZA++',
             '-S', cleaned_src_path + '.vcb',
